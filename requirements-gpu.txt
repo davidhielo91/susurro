@@ -1,0 +1,4 @@
+# Solo si tienes tarjeta NVIDIA: librerías de CUDA para que Whisper use la GPU.
+# (No hace falta instalar CUDA Toolkit aparte; estas traen lo necesario.)
+nvidia-cublas-cu12==12.9.2.10
+nvidia-cudnn-cu12==9.26.0.51

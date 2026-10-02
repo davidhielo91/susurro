@@ -1,0 +1,16 @@
+# Entorno de Python
+.venv/
+__pycache__/
+*.pyc
+
+# Datos personales de cada usuario (se crean solos al usar Susurro)
+config.json
+historial.json
+susurro.log
+
+# Caché local de herramientas (Cloudflare wrangler)
+.wrangler/
+
+# Generados al instalar / al abrir la app
+*.ico
+*.lnk
