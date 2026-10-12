@@ -49,7 +49,7 @@ Susurro usa **un solo modelo**, y el instalador lo descarga solo. **No necesitas
 | **Descarga** | Automática desde Hugging Face ([`mobiuslabsgmbh/faster-whisper-large-v3-turbo`](https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo)), **~1.6 GB**, una sola vez |
 | **Dónde queda** | `%USERPROFILE%\.cache\huggingface\hub\` |
 | **Memoria de video** | ~2 GB en GPU |
-| **Idioma** | Español (configurable en `susurro.py` → `LANGUAGE`) |
+| **Idioma** | Español por defecto; inglés, portugués, francés, italiano, alemán o detección automática en **Ajustes** |
 
 **¿Por qué este modelo?** Se comparó contra `large-v3` (el "grande") dictando en español: turbo transcribió 38 s de audio en **3.2 s** contra **12.8 s** del grande, con la misma precisión. Los modelos chicos (`small`, `medium`) escriben notablemente peor y casi no son más rápidos en CPU.
 
@@ -141,7 +141,7 @@ Ninguno se sube a Git (están en `.gitignore`). **Para respaldar o pasar Susurro
 | Escribe mal un nombre | Agrégalo en **Vocabulario**, o usa **Corregir…** en el Historial. |
 | Tarda mucho | Sin GPU NVIDIA es normal (ver Requisitos). Con NVIDIA, revisa en `susurro.log` que diga *"cargado en GPU"*. |
 | El ícono del escritorio se ve viejo | Es caché de íconos de Windows: presiona `F5` en el escritorio o reinicia. |
-| Quiero dictar en otro idioma | Cambia `LANGUAGE = "es"` en `susurro.py` (o `None` para detectarlo solo). |
+| Quiero dictar en otro idioma | Abre Susurro → **Ajustes** → **Idioma** y elige el tuyo (o «Detectar automáticamente»). |
 
 ## 🗑️ Desinstalar
 

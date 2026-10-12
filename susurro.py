@@ -34,7 +34,16 @@ MODELS = {
     "large-v3-turbo": "Rápido (large-v3-turbo)",
     "large-v3": "Máxima precisión (large-v3)",
 }
-LANGUAGE = "es"                # None = detectar idioma automáticamente
+# Idiomas del dictado (código de Whisper -> nombre en Ajustes); "auto" = detectar
+LANGUAGES = {
+    "es": "Español",
+    "en": "Inglés",
+    "pt": "Portugués",
+    "fr": "Francés",
+    "it": "Italiano",
+    "de": "Alemán",
+    "auto": "Automático",
+}
 HOLD_SECONDS = 0.35            # cuánto sostener la tecla para que cuente como "mantener"
 SAMPLE_RATE = 16000
 MIN_SECONDS = 0.4              # grabaciones más cortas se ignoran
@@ -46,6 +55,7 @@ DEFAULTS = {
     "save_history": True,
     "mic": "",                 # "" = el micrófono predeterminado de Windows
     "model": "large-v3-turbo",
+    "language": "es",
     # Palabras que Whisper debe reconocer (nombres, marcas, términos técnicos)
     # (ejemplos de uso común; cada quien agrega los suyos en la pestaña Vocabulario)
     "vocab": ["WhatsApp", "Gmail", "YouTube", "ChatGPT", "IA", "Excel", "PowerPoint", "PDF"],
@@ -156,7 +166,9 @@ HALLUCINATION_STRICT = re.compile(
 # quitan cuando Whisper mismo indica que probablemente no había voz.
 HALLUCINATION_SOFT = re.compile(
     r"gracias\s+por\s+(?:ver|mirar)|suscr[ií]bete|no\s+olvides\s+suscribirte|"
-    r"dale\s+(?:a\s+)?like|^\W*(?:m[uú]sica|aplausos|risas)\W*$|♪", re.IGNORECASE)
+    r"dale\s+(?:a\s+)?like|^\W*(?:m[uú]sica|aplausos|risas)\W*$|♪|"
+    r"thanks?\s+(?:you\s+)?for\s+watching|(?:please\s+|like\s+and\s+)subscribe|"
+    r"obrigad[oa]\s+por\s+assistir|inscreva-se|^\W*(?:music|applause)\W*$", re.IGNORECASE)
 
 
 def clean_segment(text, no_speech_prob, avg_logprob):
@@ -381,6 +393,15 @@ def entry(master, **kw):
     return ctk.CTkEntry(master, fg_color=SURFACE_2, border_color=BORDER, border_width=1,
                         text_color=SMOKE, placeholder_text_color=GRAY, corner_radius=8,
                         height=34, font=font(13), **kw)
+
+
+def option_menu(master, variable, values, width=330):
+    return ctk.CTkOptionMenu(master, variable=variable, values=values,
+                             width=width, height=34, corner_radius=8, fg_color=SURFACE_2,
+                             button_color=BORDER, button_hover_color=GRAY, text_color=SMOKE,
+                             font=font(13), dropdown_font=font(13), dropdown_fg_color=SURFACE_2,
+                             dropdown_hover_color=BORDER, dropdown_text_color=SMOKE,
+                             dynamic_resizing=False)
 
 
 def card(master):
@@ -648,7 +669,7 @@ class MainWindow:
     def __init__(self, app, tab="Historial"):
         self.app = app
         self.hotkey = app.cfg["hotkey"]
-        w = self.win = new_window(app, "Susurro", 540, 880)
+        w = self.win = new_window(app, "Susurro", 540, 930)
         w.protocol("WM_DELETE_WINDOW", self.close)
 
         header(w, "Susurro", "Dictado por voz").pack(fill="x", padx=24, pady=(20, 8))
@@ -719,18 +740,16 @@ class MainWindow:
         if current and current not in mics:
             mics.append(current)         # el elegido, aunque ahora esté desconectado
         self.mic_var = tk.StringVar(value=current or DEFAULT_MIC_LABEL)
-        ctk.CTkOptionMenu(key_card, variable=self.mic_var, values=[DEFAULT_MIC_LABEL] + mics,
-                          width=330, height=34, corner_radius=8, fg_color=SURFACE_2,
-                          button_color=BORDER, button_hover_color=GRAY, text_color=SMOKE,
-                          font=font(13), dropdown_font=font(13), dropdown_fg_color=SURFACE_2,
-                          dropdown_hover_color=BORDER, dropdown_text_color=SMOKE,
-                          dynamic_resizing=False).pack(anchor="w", padx=18)
+        option_menu(key_card, self.mic_var, [DEFAULT_MIC_LABEL] + mics).pack(anchor="w", padx=18)
         label(key_card, "«Predeterminado» sigue al que elijas en Windows, aunque lo cambies después.",
               12, MUTED, wraplength=420).pack(anchor="w", padx=18, pady=(6, 14))
 
         opts = card(tab)
         opts.pack(fill="x")
         label(opts, "Opciones", 14, weight="bold").pack(anchor="w", padx=18, pady=(14, 4))
+        self.lang_var = tk.StringVar(value=LANGUAGES[self.app.cfg["language"]])
+        row = self.option_row(opts, "Idioma", "El que hablas; «Automático» si alternas")
+        option_menu(row, self.lang_var, list(LANGUAGES.values()), width=140).pack(side="right")
         self.vars = {}
         rows = [(k, t, d, self.app.cfg[k]) for k, t, d in self.OPTIONS]
         rows.append(("startup", "Iniciar con Windows", "Se abre solo al prender la computadora",
@@ -739,14 +758,19 @@ class MainWindow:
             self.vars[key] = self.switch_row(opts, title, desc, value)
         ctk.CTkFrame(opts, fg_color="transparent", height=8).pack()
 
-    def switch_row(self, master, title, desc, value):
-        var = tk.BooleanVar(value=value)
+    def option_row(self, master, title, desc):
+        """Fila con título y descripción a la izquierda; el control va a la derecha."""
         row = ctk.CTkFrame(master, fg_color="transparent")
         row.pack(fill="x", padx=18, pady=5)
         text = ctk.CTkFrame(row, fg_color="transparent")
         text.pack(side="left", fill="x", expand=True)
         label(text, title, 13).pack(anchor="w")
         label(text, desc, 11, MUTED).pack(anchor="w")
+        return row
+
+    def switch_row(self, master, title, desc, value):
+        var = tk.BooleanVar(value=value)
+        row = self.option_row(master, title, desc)
         ctk.CTkSwitch(row, text="", variable=var, width=46, switch_width=42, switch_height=22,
                       progress_color=TURQUOISE, fg_color=BORDER, button_color=SMOKE,
                       button_hover_color=SMOKE).pack(side="right")
@@ -869,6 +893,8 @@ class MainWindow:
         cfg = dict(self.app.cfg, hotkey=self.hotkey, **values)
         mic = self.mic_var.get()
         cfg["mic"] = "" if mic == DEFAULT_MIC_LABEL else mic
+        cfg["language"] = next(code for code, name in LANGUAGES.items()
+                               if name == self.lang_var.get())
         cfg["vocab"] = clean_words(self.words.get("1.0", "end").splitlines())
         cfg["replacements"] = [[str(v) for v in self.reps.item(i, "values")]
                                for i in self.reps.get_children()]
@@ -1036,6 +1062,8 @@ class Susurro:
         self.loading_model = None
         if self.cfg["model"] not in MODELS:
             self.cfg["model"] = DEFAULTS["model"]
+        if self.cfg["language"] not in LANGUAGES:
+            self.cfg["language"] = DEFAULTS["language"]
         self.state = "idle"        # idle | pending | hold | toggle
         self.frames = []
         self.stream = None
@@ -1088,6 +1116,11 @@ class Susurro:
             self.tray.notify(snippet(text, 120), "Copiado al portapapeles")
         except Exception:
             pass
+
+    def whisper_language(self):
+        """Código para Whisper; None le pide que detecte el idioma."""
+        lang = self.cfg["language"]
+        return None if lang == "auto" else lang
 
     @property
     def key_name(self):
@@ -1162,7 +1195,8 @@ class Susurro:
                 log(f"No se pudo usar la GPU ({e}); usando CPU")
                 model = WhisperModel(name, device="cpu", compute_type="int8")
             # Calentamiento para que la primera transcripción sea rápida
-            list(model.transcribe(np.zeros(SAMPLE_RATE, dtype=np.float32), language=LANGUAGE)[0])
+            list(model.transcribe(np.zeros(SAMPLE_RATE, dtype=np.float32),
+                                  language=self.whisper_language())[0])
         except Exception as e:
             log(f"No se pudo cargar {name}: {e}")
             if switching:
@@ -1305,7 +1339,7 @@ class Susurro:
             start = time.time()
             vocab = self.cfg["vocab"]
             segments, _ = self.model.transcribe(
-                audio, language=LANGUAGE, beam_size=5, vad_filter=True,
+                audio, language=self.whisper_language(), beam_size=5, vad_filter=True,
                 condition_on_previous_text=False,
                 # Pistas de vocabulario; se aplican a cada tramo de 30 s del audio
                 hotwords=", ".join(vocab) if vocab else None,
